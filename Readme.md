@@ -1,0 +1,1 @@
+Repo for school project to create a personal GPT
