@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: personal-gpt-service
+  namespace: personal-gpt
+spec:
+  type: LoadBalancer
+  selector:
+    app: personal-gpt-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080

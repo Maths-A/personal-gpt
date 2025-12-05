@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: personal-gpt
+  labels:
+    app: personal-gpt-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: personal-gpt-app
+  template:
+    metadata:
+      labels:
+        app: personal-gpt-app
+    spec:
+      containers:
+      - name: personal-gpt-container
+        image: mathsaubert/personal-gpt-cse239:mistral.7b.Q2
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "4"
+          limits:
+            memory: "4Gi"
+            cpu: "8"

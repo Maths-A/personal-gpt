@@ -1,0 +1,72 @@
+FROM ubuntu:22.04 AS builder
+
+# Prevent interactive prompts during build
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    wget \
+    curl \
+    libcurl4-openssl-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone llama.cpp
+WORKDIR /app
+RUN git clone https://github.com/ggml-org/llama.cpp.git
+
+WORKDIR /app/llama.cpp
+
+# Build with CMake (more reliable than make)
+RUN mkdir build && cd build && \
+    cmake .. \
+    -DLLAMA_CURL=ON \
+    -DBUILD_SHARED_LIBS=OFF \
+    && cmake --build . --config Release -j$(nproc)
+
+# Runtime stage
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libcurl4 \
+    curl \
+    ca-certificates \
+    libgomp1 \
+    libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy built binaries from build directory
+COPY --from=builder /app/llama.cpp/build/bin/llama-server /usr/local/bin/
+COPY --from=builder /app/llama.cpp/build/bin/llama-cli /usr/local/bin/
+
+# Make binaries executable
+RUN chmod +x /usr/local/bin/llama-server /usr/local/bin/llama-cli
+
+# Create models directory
+RUN mkdir -p /models
+
+# Copy models into the container (assumes models are in local 'models' directory)
+COPY /models/ /models/
+
+# Expose port for llama-server
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=60s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
+
+# Default command - run server with CPU-only settings
+CMD ["llama-server", \
+     "--host", "0.0.0.0", \
+     "--port", "8080", \
+     "--model", "/models/model-mistral-7b-Q4.gguf", \
+     "--ctx-size", "2048", \
+     "--threads", "8", \
+     "--batch-size", "512", \
+     "--chat-template", "chatml"]

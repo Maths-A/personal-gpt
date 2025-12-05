@@ -1,2 +1,8 @@
 # Ignore macOS system files
 .DS_Store
+
+# ignore models folder
+Repo/models/model-mistral-7b-Q4.gguf
+
+# ignore Reports folder
+Reports/
